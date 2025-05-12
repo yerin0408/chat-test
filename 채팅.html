@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>로비 채팅 테스트</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+  <style>
+    #chatBox { border: 1px solid #ccc; height: 300px; overflow-y: scroll; margin-bottom: 10px; padding: 8px; }
+    li { list-style: none; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+<h2>💬 로비 채팅</h2>
+<ul id="chatBox"></ul>
+<input type="text" id="nickname" value="체리버터" placeholder="닉네임" />
+<input type="text" id="message" placeholder="메시지 입력" />
+<button id="sendBtn">전송</button>
+
+<script>
+  let stompClient = null;
+  const roomId = "lobby";
+
+  function appendMessage(msg) {
+    const li = document.createElement("li");
+    li.textContent = `${msg.senderNickname}: ${msg.content}`;
+    document.getElementById("chatBox").appendChild(li);
+  }
+
+  function fetchMessages(userId) {
+    fetch(`/api/chat/rooms/${roomId}/messages`, {
+      headers: {
+        "X-USER-ID": encodeURIComponent(userId) // 여기가 핵심
+      }
+    })
+            .then(res => res.ok ? res.json() : Promise.reject(res.status))
+            .then(data => {
+              data.content.forEach(appendMessage);
+            })
+            .catch(err => console.warn("이전 메시지 불러오기 실패:", err));
+  }
+
+  function connectWebSocket(userId) {
+    const socket = new SockJS("/ws/chat/websocket");
+    stompClient = Stomp.over(socket);
+    stompClient.debug = null;
+
+    stompClient.connect({ "X-USER-ID": encodeURIComponent(userId) }, () => {
+      stompClient.subscribe(`/topic/chat.${roomId}`, (msg) => {
+        const body = JSON.parse(msg.body);
+        appendMessage(body);
+      });
+    });
+  }
+
+  function sendMessage() {
+    const nickname = document.getElementById("nickname").value.trim();
+    const content = document.getElementById("message").value.trim();
+    if (!nickname || !content || !stompClient?.connected) return;
+
+    const payload = {
+      roomId,
+      senderId: nickname,
+      senderNickname: nickname,
+      content,
+      messageType: "TEXT"
+    };
+
+    stompClient.send(`/app/chat.send.${roomId}`, {}, JSON.stringify(payload));
+    document.getElementById("message").value = "";
+  }
+
+  document.getElementById("sendBtn").addEventListener("click", sendMessage);
+
+  // 닉네임 가져와서 fetch → connect 순서대로 실행
+  const nickname = document.getElementById("nickname").value;
+  fetchMessages(nickname);
+  connectWebSocket(nickname);
+</script>
+
+</body>
+</html>
