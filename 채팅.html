@@ -20,6 +20,7 @@
 <script>
   let stompClient = null;
   const roomId = "lobby";
+  const BASE_URL = "http://223.130.159.146:8080";
 
   function appendMessage(msg) {
     const li = document.createElement("li");
@@ -28,7 +29,7 @@
   }
 
   function fetchMessages(userId) {
-    fetch(`/api/chat/rooms/${roomId}/messages`, {
+    fetch(`${BASE_URL}/api/chat/rooms/${roomId}/messages`, {
       headers: {
         "X-USER-ID": encodeURIComponent(userId) // 여기가 핵심
       }
