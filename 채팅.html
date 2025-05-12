@@ -20,7 +20,8 @@
 <script>
   let stompClient = null;
   const roomId = "lobby";
-  const BASE_URL = "http://223.130.159.146:8080";
+  const BASE_URL = "https://223.130.159.146";
+  const SOCKET_URL = `${BASE_URL}/ws/chat/websocket`;
 
   function appendMessage(msg) {
     const li = document.createElement("li");
@@ -42,7 +43,7 @@
   }
 
   function connectWebSocket(userId) {
-    const socket = new SockJS("/ws/chat/websocket");
+    const socket = new SockJS(SOCKET_URL);
     stompClient = Stomp.over(socket);
     stompClient.debug = null;
 
